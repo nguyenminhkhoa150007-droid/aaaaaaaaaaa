@@ -13,14 +13,18 @@
     <style>
         body { 
             margin: 0; padding: 0; 
-            background-color: #1e1e2f; color: white; 
+            /* [CẬP NHẬT] Dùng biến môi trường của E-Ra để đồng bộ màu Sáng/Tối trên Mobile App */
+            background-color: var(--era-background, #1e1e2f); 
+            color: var(--era-text, white); 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             height: 100vh; overflow: hidden; 
             font-family: sans-serif; user-select: none; touch-action: none; 
         }
         #joystick-zone { 
             width: 100%; height: 60vh; position: relative; 
-            background-color: #2a2a40; border-radius: 16px; 
+            /* [CẬP NHẬT] Màu nền khung Joystick đồng bộ với màu thẻ (Card) trên Mobile */
+            background-color: var(--era-card, #2a2a40); 
+            border-radius: 16px; 
             margin-top: 20px; box-shadow: inset 0 4px 6px rgba(0,0,0,0.3); 
         }
     </style>
@@ -51,13 +55,17 @@
             onValues: (values) => {}
         });
 
+        // [CẬP NHẬT] Tính toán kích thước Joystick linh hoạt cho màn hình Mobile
+        const screenWidth = window.innerWidth;
+        const joySize = screenWidth < 400 ? 110 : 140; // Thu nhỏ lại nếu là màn hình điện thoại bé
+
         // Tạo Joystick
         const manager = nipplejs.create({
             zone: document.getElementById('joystick-zone'),
             mode: 'static',
             position: { left: '50%', top: '50%' },
             color: '#3b82f6',
-            size: 140,
+            size: joySize,
             restOpacity: 0.8
         });
 
