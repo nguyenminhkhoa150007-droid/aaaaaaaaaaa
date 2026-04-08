@@ -11,33 +11,58 @@
     <!-- Thư viện E-Ra Widget -->
     <script src="https://www.unpkg.com/@eohjsc/era-widget@1.1.6/src/index.js"></script>
     <style>
-        body { 
+        html, body { 
             margin: 0; padding: 0; 
-            /* [CẬP NHẬT] Dùng biến môi trường của E-Ra để đồng bộ màu Sáng/Tối trên Mobile App */
-            background-color: var(--era-background, #1e1e2f); 
-            color: var(--era-text, white); 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            height: 100vh; overflow: hidden; 
-            font-family: sans-serif; user-select: none; touch-action: none; 
+            width: 100%; height: 100%;
+            /* Đặt nền trong suốt để đồng bộ hoàn hảo với theme (Sáng/Tối) của App E-Ra */
+            background-color: transparent; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            user-select: none; touch-action: none; overflow: hidden;
         }
+        
+        /* Hiệu ứng kính mờ (Glassmorphism) hoạt động tốt trên cả nền sáng và tối */
+        .glass-panel {
+            background-color: rgba(128, 138, 155, 0.15);
+            border: 1px solid rgba(128, 138, 155, 0.2);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
         #joystick-zone { 
-            width: 100%; height: 60vh; position: relative; 
-            /* [CẬP NHẬT] Màu nền khung Joystick đồng bộ với màu thẻ (Card) trên Mobile */
-            background-color: var(--era-card, #2a2a40); 
+            width: 100%; 
+            flex: 1; /* Tự động điền đầy khoảng trống còn lại */
+            min-height: 150px;
+            position: relative; 
             border-radius: 16px; 
-            margin-top: 20px; box-shadow: inset 0 4px 6px rgba(0,0,0,0.3); 
+            margin-top: 12px; 
+        }
+
+        /* Tùy chỉnh màu chữ tự động dựa trên theme của hệ điều hành */
+        .adaptive-text {
+            color: #4b5563; /* Màu xám đậm cho nền sáng */
+        }
+        @media (prefers-color-scheme: dark) {
+            .adaptive-text {
+                color: #e5e7eb; /* Màu xám nhạt cho nền tối */
+            }
         }
     </style>
 </head>
-<body>
-    <div class="w-full max-w-md px-4 text-center">
-        <h2 class="text-xl font-bold text-blue-400">Điều khiển Xe 3 Bánh</h2>
-        <div class="flex justify-around mt-4 text-sm text-gray-300 bg-gray-800 p-3 rounded-lg shadow-md">
-            <div>Trục X: <span id="valX" class="font-bold text-green-400 text-lg">0</span></div>
-            <div>Trục Y: <span id="valY" class="font-bold text-blue-400 text-lg">0</span></div>
+<body class="flex flex-col items-center p-3 box-border">
+
+    <!-- Bảng thông số gọn gàng -->
+    <div class="w-full max-w-sm flex justify-around items-center px-4 py-3 rounded-xl glass-panel shadow-sm">
+        <div class="text-sm adaptive-text font-medium flex items-center">
+            Trục X: <span id="valX" class="font-bold text-blue-500 text-lg ml-2 w-8 text-center">0</span>
         </div>
-        <div id="joystick-zone"></div>
+        <div class="w-px h-6 bg-gray-400 opacity-30"></div> <!-- Vạch kẻ giữa -->
+        <div class="text-sm adaptive-text font-medium flex items-center">
+            Trục Y: <span id="valY" class="font-bold text-blue-500 text-lg ml-2 w-8 text-center">0</span>
+        </div>
     </div>
+
+    <!-- Vùng chứa Joystick -->
+    <div id="joystick-zone" class="w-full max-w-sm glass-panel shadow-inner"></div>
 
     <script>
         const eraWidget = new EraWidget();
@@ -55,55 +80,57 @@
             onValues: (values) => {}
         });
 
-        // [CẬP NHẬT] Tính toán kích thước Joystick linh hoạt cho màn hình Mobile
-        const screenWidth = window.innerWidth;
-        const joySize = screenWidth < 400 ? 110 : 140; // Thu nhỏ lại nếu là màn hình điện thoại bé
+        // Đợi 1 chút để DOM render, giúp tính toán kích thước Joystick chuẩn hơn
+        setTimeout(() => {
+            const container = document.getElementById('joystick-zone');
+            const rect = container.getBoundingClientRect();
+            
+            // Tự động tính kích thước Joystick dựa vào độ rộng/cao thực tế của khung
+            const calculatedSize = Math.min(rect.width, rect.height) * 0.75; 
+            // Giới hạn kích thước từ 100px đến 140px để đảm bảo luôn đẹp
+            const finalJoySize = Math.max(100, Math.min(calculatedSize, 140));
 
-        // Tạo Joystick
-        const manager = nipplejs.create({
-            zone: document.getElementById('joystick-zone'),
-            mode: 'static',
-            position: { left: '50%', top: '50%' },
-            color: '#3b82f6',
-            size: joySize,
-            restOpacity: 0.8
-        });
+            // Tạo Joystick
+            const manager = nipplejs.create({
+                zone: container,
+                mode: 'static',
+                position: { left: '50%', top: '50%' },
+                color: '#3b82f6', // Màu xanh dương chuẩn Tailwind
+                size: finalJoySize,
+                restOpacity: 0.8
+            });
 
-        let lastSendTime = 0;
+            let lastSendTime = 0;
 
-        // Bắt sự kiện khi kéo Joystick
-        manager.on('move', (event, data) => {
-            let x = Math.round(data.vector.x * 100);
-            let y = Math.round(data.vector.y * 100); 
+            // Bắt sự kiện khi kéo Joystick
+            manager.on('move', (event, data) => {
+                let x = Math.round(data.vector.x * 100);
+                let y = Math.round(data.vector.y * 100); 
 
-            valXEl.innerText = x;
-            valYEl.innerText = y;
+                valXEl.innerText = x;
+                valYEl.innerText = y;
 
-            const now = Date.now();
-            if (now - lastSendTime > 100) {
-                lastSendTime = now;
-                sendDataToEra(x, y);
-            }
-        });
+                const now = Date.now();
+                if (now - lastSendTime > 100) {
+                    lastSendTime = now;
+                    sendDataToEra(x, y);
+                }
+            });
 
-        // Bắt sự kiện khi thả tay khỏi Joystick
-        manager.on('end', () => {
-            valXEl.innerText = 0;
-            valYEl.innerText = 0;
-            sendDataToEra(0, 0);
-        });
+            // Bắt sự kiện khi thả tay khỏi Joystick
+            manager.on('end', () => {
+                valXEl.innerText = 0;
+                valYEl.innerText = 0;
+                sendDataToEra(0, 0);
+            });
+            
+        }, 150);
 
         // Hàm gửi dữ liệu lên E-Ra
         function sendDataToEra(x, y) {
             if (config && config.actions && config.actions.length > 0) {
                 let payload = `${x},${y}`; 
-                
-                // Cú pháp đúng của SDK: triggerAction(action_id, alias, { value: dữ_liệu })
                 eraWidget.triggerAction(config.actions[0].action, 1, { value: payload });
-                
-                console.log("Đã gửi Data: ", payload);
-            } else {
-                console.error("LỖI: Chưa cấu hình Action trên E-Ra Dashboard.");
             }
         }
     </script>
