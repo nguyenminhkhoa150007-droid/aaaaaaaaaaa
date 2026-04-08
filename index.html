@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>E-Ra Joystick Widget</title>
+    
+    <!-- Thư viện NippleJS để tạo giao diện Joystick -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
+    
+    <!-- TailwindCSS để định dạng giao diện nhanh -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Import thư viện E-Ra Widget -->
+    <script src="https://www.unpkg.com/@eohjsc/era-widget@1.1.6/src/index.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1e1e2f;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+            touch-action: none; 
+        }
+        #joystick-zone {
+            width: 100%;
+            height: 60vh;
+            position: relative;
+            background-color: #2a2a40;
+            border-radius: 16px;
+            margin-top: 20px;
+            box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="w-full max-w-md px-4 text-center">
+        <h2 class="text-xl font-bold text-blue-400">Điều khiển Joystick</h2>
+        <div class="flex justify-around mt-4 text-sm text-gray-300 bg-gray-800 p-3 rounded-lg shadow-md">
+            <div>Trục X: <span id="valX" class="font-bold text-green-400 text-lg">0</span></div>
+            <div>Trục Y: <span id="valY" class="font-bold text-blue-400 text-lg">0</span></div>
+        </div>
+        <div id="joystick-zone"></div>
+    </div>
+
+    <script>
+        // --- 1. KHỞI TẠO THEO CHUẨN CỦA ERA-WIDGET-DASHBOARD ---
+        const eraWidget = new EraWidget();
+        let config = null;
+        
+        const valXEl = document.getElementById('valX');
+        const valYEl = document.getElementById('valY');
+
+        eraWidget.init({
+            onConfiguration: (configuration) => {
+                // Lưu lại cấu hình lấy từ E-Ra Web Console
+                config = configuration;
+                console.log('Cấu hình E-Ra:', config);
+            },
+            onValues: (values) => {
+                // Xử lý dữ liệu datastream trả về từ ESP32 tại đây (nếu cần)
+            }
+        });
+
+        // --- 2. KHỞI TẠO GIAO DIỆN JOYSTICK ---
+        const joystickZone = document.getElementById('joystick-zone');
+        const manager = nipplejs.create({
+            zone: joystickZone,
+            mode: 'static',
+            position: { left: '50%', top: '50%' },
+            color: '#3b82f6',
+            size: 140,
+            restOpacity: 0.8
+        });
+
+        let lastSendTime = 0;
+
+        // --- 3. XỬ LÝ SỰ KIỆN KÉO/THẢ JOYSTICK ---
+        manager.on('move', (event, data) => {
+            // Quy đổi vector x, y sang giá trị PWM
+            let x = Math.round(data.vector.x * 255);
+            let y = Math.round(data.vector.y * 255); 
+
+            valXEl.innerText = x;
+            valYEl.innerText = y;
+
+            const now = Date.now();
+            if (now - lastSendTime > 100) {
+                lastSendTime = now;
+                sendDataToEra(x, y);
+            }
+        });
+
+        manager.on('end', () => {
+            valXEl.innerText = 0;
+            valYEl.innerText = 0;
+            sendDataToEra(0, 0);
+        });
+
+        // --- 4. GỬI DỮ LIỆU ĐI QUA ACTIONS ---
+        function sendDataToEra(x, y) {
+            // Kiểm tra config đã được load và có đủ ít nhất 2 Action (Trục X và Trục Y)
+            if (config && config.actions && config.actions.length >= 2) {
+                eraWidget.triggerAction(config.actions[0].action, x);
+                eraWidget.triggerAction(config.actions[1].action, y);
+            }
+        }
+    </script>
+</body>
+</html>
