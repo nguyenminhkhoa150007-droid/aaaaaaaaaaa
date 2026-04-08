@@ -65,14 +65,12 @@
 
         // Bắt sự kiện khi kéo Joystick
         manager.on('move', (event, data) => {
-            // Chuyển đổi ra dải -100 đến 100 cho khớp với code ESP32 của bạn
             let x = Math.round(data.vector.x * 100);
             let y = Math.round(data.vector.y * 100); 
 
             valXEl.innerText = x;
             valYEl.innerText = y;
 
-            // Giới hạn tần suất gửi để không bị spam mạng (100ms gửi 1 lần)
             const now = Date.now();
             if (now - lastSendTime > 100) {
                 lastSendTime = now;
@@ -89,13 +87,15 @@
 
         // Hàm gửi dữ liệu lên E-Ra
         function sendDataToEra(x, y) {
-            // Kiểm tra xem đã có Action cấu hình trên Web E-Ra chưa
             if (config && config.actions && config.actions.length > 0) {
-                let payload = `${x},${y}`; // Gộp thành chuỗi "x,y" (Ví dụ: "50,-20")
-                eraWidget.triggerAction(config.actions[0].action, payload);
+                let payload = `${x},${y}`; 
+                
+                // Cú pháp đúng của SDK: triggerAction(action_id, alias, { value: dữ_liệu })
+                eraWidget.triggerAction(config.actions[0].action, 1, { value: payload });
+                
                 console.log("Đã gửi Data: ", payload);
             } else {
-                console.error("LỖI: Chưa cấu hình Action trên E-Ra Dashboard. Không thể gửi dữ liệu!");
+                console.error("LỖI: Chưa cấu hình Action trên E-Ra Dashboard.");
             }
         }
     </script>
