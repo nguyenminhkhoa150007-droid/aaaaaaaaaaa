@@ -86,9 +86,9 @@
 
         // --- 3. XỬ LÝ SỰ KIỆN KÉO/THẢ JOYSTICK ---
         manager.on('move', (event, data) => {
-            // Quy đổi vector x, y sang giá trị PWM
-            let x = Math.round(data.vector.x * 255);
-            let y = Math.round(data.vector.y * 255); 
+            // Quy đổi vector x, y sang khoảng -100 -> 100 để khớp thuật toán ESP32
+            let x = Math.round(data.vector.x * 100);
+            let y = Math.round(data.vector.y * 100); 
 
             valXEl.innerText = x;
             valYEl.innerText = y;
@@ -108,10 +108,10 @@
 
         // --- 4. GỬI DỮ LIỆU ĐI QUA ACTIONS ---
         function sendDataToEra(x, y) {
-            // Kiểm tra config đã được load và có đủ ít nhất 2 Action (Trục X và Trục Y)
-            if (config && config.actions && config.actions.length >= 2) {
-                eraWidget.triggerAction(config.actions[0].action, x);
-                eraWidget.triggerAction(config.actions[1].action, y);
+            // ESP32 đang chờ 1 chuỗi "x,y" qua chân V0 (Action 0)
+            if (config && config.actions && config.actions.length > 0) {
+                let payload = `${x},${y}`; // Gộp thành chuỗi, ví dụ: "50,-30"
+                eraWidget.triggerAction(config.actions[0].action, payload);
             }
         }
     </script>
